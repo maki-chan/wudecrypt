@@ -27,7 +27,7 @@ struct partition_entry {
 struct partition {
     uint64_t offset;
     uint8_t identifier[25];
-    char name[PARTITION_TOC_ENTRY_SIZE];
+    char name[PTOC_SIZE];
 
     uint8_t key[16];
     uint8_t iv[16];

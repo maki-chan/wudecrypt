@@ -105,7 +105,7 @@ int main(int argc, char* argv[]) {
         printf("Partition %d:\n", i + 1);
         printf("\tPartition ID:     %.*s\n", 0x19, partitions[i].identifier);
         printf("\tPartition Name:   %s\n", partitions[i].name);
-        printf("\tPartition Offset: 0x%llX\n\n", partitions[i].offset);
+        printf("\tPartition Offset: 0x%llX\n\n", (unsigned long long int)partitions[i].offset);
     }
 
     fclose(wudimage);
