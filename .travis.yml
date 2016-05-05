@@ -15,3 +15,10 @@ before_script:
 script:
     - bkl wudecrypt.bkl
     - make
+
+notifications:
+    email:
+        recipients:
+            - michael@armbrust.me
+        on_success: change
+        on_failure: always
