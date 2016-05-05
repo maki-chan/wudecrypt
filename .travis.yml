@@ -33,6 +33,8 @@ before_script:
 script:
     - bkl wudecrypt.bkl
     - make
+after_success:
+    - cat GNUmakefile
 
 notifications:
     email:
