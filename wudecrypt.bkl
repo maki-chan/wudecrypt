@@ -1,0 +1,8 @@
+toolsets = gnu;
+program wudecrypt {
+    sources {
+        main.c
+        functions.c
+        aes.c
+    }
+}
