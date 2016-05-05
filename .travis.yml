@@ -1,0 +1,17 @@
+language: c
+os: linux
+compiler:
+    - gcc
+    - clang
+
+apt:
+    packages:
+        - python
+
+before_script:
+    - wget https://github.com/vslavik/bakefile/releases/download/v1.2.5.1/bakefile-1.2.5.1_beta-bin.tar.bz2 -O /tmp/bakefile.tar.bz2
+    - tar xjvf /tmp/bakefile.tar.bz2
+    - export PATH=$PATH:$PWD/bakefile-1.2.5.1_beta
+script:
+    - bkl wudecrypt.bkl
+    - make
