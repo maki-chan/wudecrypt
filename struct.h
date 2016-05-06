@@ -1,5 +1,5 @@
-#ifndef STRUCT_H
-#define STRUCT_H
+#ifndef _STRUCT_H_
+#define _STRUCT_H_
 #include "config.h"
 
 struct clusters {
@@ -37,4 +37,4 @@ struct partition {
 
     struct partition_entry* entries;
 };
-#endif
+#endif // _STRUCT_H_

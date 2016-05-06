@@ -1,5 +1,5 @@
-#ifndef CONFIG_H
-#define CONFIG_H
+#ifndef _CONFIG_H_
+#define _CONFIG_H_
 #include <stdint.h>
 
 #define PTOC_SIZE 0x80
@@ -22,4 +22,4 @@ static const uint8_t DECRYPTED_AREA_SIGNATURE[4] = { 0xCC, 0xA6, 0xE6, 0x7B };
 static const uint8_t PARTITION_FILE_TABLE_SIGNATURE[4] = { 0x46, 0x53, 0x54, 0x00 };
 
 static const char* TITLE_TICKET_FILE = "TITLE.TIK";
-#endif
+#endif // _CONFIG_H_

@@ -15,7 +15,7 @@
 #endif
 
 #ifndef ECB
-  #define ECB 1
+  #define ECB 0
 #endif
 
 

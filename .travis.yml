@@ -1,6 +1,7 @@
 language: c
 
 matrix:
+    fast_finish: true
     allow_failures:
         - os: osx
     include:
@@ -21,18 +22,13 @@ matrix:
           osx_image: xcode7.1
           compiler: clang
 
-addons:
-    apt:
-        packages:
-            - python
-
 before_script:
     - wget https://github.com/vslavik/bakefile/releases/download/v1.2.5.1/bakefile-1.2.5.1_beta-bin.tar.bz2 -O /tmp/bakefile.tar.bz2
     - tar xjvf /tmp/bakefile.tar.bz2
     - export PATH=$PATH:$PWD/bakefile-1.2.5.1_beta
 script:
     - bkl wudecrypt.bkl
-    - make
+    - make CC=$CC CXX=$CXX
 after_success:
     - cat GNUmakefile
 
