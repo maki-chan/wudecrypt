@@ -56,4 +56,9 @@ struct keydic {
     struct titlekeystruct titlekey;
     UT_hash_handle hh;
 };
+
+struct block {
+    int64_t number;
+    int64_t offset;
+};
 #endif // _STRUCT_H_

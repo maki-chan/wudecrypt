@@ -6,10 +6,11 @@
 uint8_t* loadKeyFile(FILE* file);
 uint8_t* loadKey(char* filename);
 
-void* readFileOffset(long int offset, size_t size, size_t count, FILE* file);
+void* readFileOffset(uint64_t offset, size_t size, size_t count, FILE* file);
 void* readFile(size_t size, size_t count, FILE* file);
 
-uint8_t* readEncryptedOffset(uint8_t* key, long int offset, size_t size, FILE* file);
+uint8_t* readEncryptedOffset(uint8_t* key, uint64_t offset, size_t size, FILE* file);
+uint8_t* readVolumeEncryptedOffset(uint8_t* key, int64_t volume_offset, int64_t cluster_offset, int64_t file_offset, size_t size, FILE* file);
 
 struct partition_entry* create_partition_entry(uint8_t* raw_entry);
 

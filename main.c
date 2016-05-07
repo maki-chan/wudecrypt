@@ -204,7 +204,7 @@ int main(int argc, char* argv[]) {
                 || strncmp((char*)partitions[i].name, "GI", 2) == 0) {
                 for(entry = (struct partition_entry*)utarray_front(partitions[i].entries); entry != NULL; entry = (struct partition_entry*)utarray_next(partitions[i].entries, entry)) {
                     if(entry->is_directory != 1 && strincmp(entry->entry_name, TITLE_TICKET_FILE, strlen(TITLE_TICKET_FILE)) == 0) {
-                        // TODO Figure out how to decrypt files in the partition block itself
+                        // TODO Add title key decryption here, function to decrypt exists now
                     }
                 }
             }

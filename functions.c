@@ -45,7 +45,7 @@ uint8_t* loadKey(char* filename) {
     return key;
 }
 
-void* readFileOffset(long int offset, size_t size, size_t count, FILE* file) {
+void* readFileOffset(uint64_t offset, size_t size, size_t count, FILE* file) {
     void* output;
     if (fseek(file, offset, SEEK_SET) != 0) {
         fprintf(stderr, "Error while seeking in file\n");
@@ -75,7 +75,7 @@ void* readFile(size_t size, size_t count, FILE* file) {
     return output;
 }
 
-uint8_t* readEncryptedOffset(uint8_t* key, long int offset, size_t count, FILE* file) {
+uint8_t* readEncryptedOffset(uint8_t* key, uint64_t offset, size_t count, FILE* file) {
     uint8_t iv[16];
     uint8_t* encrypted_chunk = (uint8_t*)readFileOffset(offset, sizeof(uint8_t), count, file);
     uint8_t* decrypted_chunk;
@@ -95,6 +95,40 @@ uint8_t* readEncryptedOffset(uint8_t* key, long int offset, size_t count, FILE* 
 
     free(encrypted_chunk);
     return decrypted_chunk;
+}
+
+uint8_t* readVolumeEncryptedOffset(uint8_t* key, int64_t volume_offset, int64_t cluster_offset, int64_t file_offset, size_t size, FILE* file) {
+    uint8_t iv[16];
+    uint8_t* encrypted_chunk;
+    uint8_t* decrypted_chunk;
+    uint8_t* output = (uint8_t*)malloc(size * sizeof(uint8_t));
+    int64_t buffer_location = 0;
+    int64_t max_copy_size, copy_size, read_offset;
+    struct block blockstruct;
+
+    while (size > 0) {
+        blockstruct.number = file_offset / 0x8000;
+        blockstruct.offset = file_offset % 0x8000;
+
+        read_offset = WIIU_DECRYPTED_AREA_OFFSET + volume_offset + cluster_offset + (blockstruct.number * 0x8000);
+        encrypted_chunk = (uint8_t*)readFileOffset(read_offset, sizeof(uint8_t), 0x8000, file);
+
+        memset(iv, 0, 16);
+        AES128_CBC_decrypt_buffer(decrypted_chunk, encrypted_chunk, 0x8000, key, iv);
+        free(encrypted_chunk);
+
+        max_copy_size = 0x8000 - blockstruct.offset;
+        copy_size = (size > max_copy_size) ? max_copy_size : size;
+
+        memcpy(output + buffer_location, decrypted_chunk + blockstruct.offset, copy_size);
+        free(decrypted_chunk);
+
+        size -= copy_size;
+        buffer_location += copy_size;
+        file_offset += copy_size;
+    }
+
+    return output;
 }
 
 struct partition_entry* create_partition_entry(uint8_t* raw_entry) {
