@@ -1,5 +1,7 @@
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "config.h"
 #include "functions.h"
 #include "aes.h"
@@ -74,7 +76,7 @@ void* readFile(size_t size, size_t count, FILE* file) {
 }
 
 uint8_t* readEncryptedOffset(uint8_t* key, long int offset, size_t count, FILE* file) {
-    uint8_t* iv[16];
+    uint8_t iv[16];
     uint8_t* encrypted_chunk = (uint8_t*)readFileOffset(offset, sizeof(uint8_t), count, file);
     uint8_t* decrypted_chunk;
     if (encrypted_chunk == NULL) {
@@ -88,10 +90,51 @@ uint8_t* readEncryptedOffset(uint8_t* key, long int offset, size_t count, FILE* 
         return NULL;
     }
 
-    AES128_CBC_decrypt_buffer(decrypted_chunk, encrypted_chunk, count, key, (uint8_t*)iv);
+    memset(iv, 0, 16);
+    AES128_CBC_decrypt_buffer(decrypted_chunk, encrypted_chunk, count, key, iv);
 
     free(encrypted_chunk);
     return decrypted_chunk;
+}
+
+struct partition_entry* create_partition_entry(uint8_t* raw_entry) {
+    struct partition_entry* entry = (struct partition_entry*)malloc(sizeof(struct partition_entry));
+
+    if(raw_entry[0] == 1) {
+        entry->is_directory = 1;
+        entry->last_row_in_dir = bytesToUIntBE(raw_entry + 8);
+    } else {
+        entry->is_directory = 0;
+        entry->size = bytesToUIntBE(raw_entry + 8);
+    }
+
+    entry->name_offset = bytesToUIntBE(raw_entry) & 0x00FFFFFF;
+
+    entry->offset_in_cluster = (uint64_t)bytesToUIntBE(raw_entry + 4);
+    entry->offset_in_cluster <<= 5;
+
+    entry->unknown = bytesToUShortBE(raw_entry + 0x0C);
+    entry->starting_cluster = bytesToUShortBE(raw_entry + 0x0E);
+
+    return entry;
+}
+
+int strincmp(const char *s1, const char *s2, int n)
+{
+	/* case insensitive comparison */
+	int d;
+	while (--n >= 0) {
+	  d = (tolower(*s1) - tolower(*s2));
+	  if ( d != 0 || *s1 == '\0' || *s2 == '\0' )
+	    return d;
+	  ++s1;
+	  ++s2;
+	}
+	return 0;
+}
+
+uint16_t bytesToUShortBE(uint8_t* bytes) {
+    return (bytes[0] << 8) | bytes[1];
 }
 
 uint32_t bytesToUIntBE(uint8_t* bytes) {

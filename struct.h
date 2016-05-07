@@ -1,8 +1,10 @@
 #ifndef _STRUCT_H_
 #define _STRUCT_H_
 #include "config.h"
+#include "uthash.h"
+#include "utarray.h"
 
-struct clusters {
+struct partition_cluster {
     uint64_t offset;
     uint64_t size;
 
@@ -13,7 +15,8 @@ struct clusters {
 struct partition_entry {
         uint8_t is_directory;
         uint64_t name_offset;
-        char* entry_name;
+        // Allow names with a size of up to 512 bytes, should be enough hopefully
+        char entry_name[512];
 
         uint64_t offset_in_cluster;
 
@@ -24,6 +27,8 @@ struct partition_entry {
         uint16_t starting_cluster;
 };
 
+static const UT_icd partition_entry_icd = { sizeof(struct partition_entry), NULL, NULL, NULL };
+
 struct partition {
     uint64_t offset;
     uint8_t identifier[25];
@@ -33,8 +38,22 @@ struct partition {
     uint8_t iv[16];
 
     uint32_t cluster_count;
-    struct cluster* clusters;
+    struct partition_cluster* clusters;
 
-    struct partition_entry* entries;
+    UT_array* entries;
+};
+
+struct titlekeystruct {
+    uint8_t encryptedKey[16];
+    uint8_t decryptedKey[16];
+    uint8_t iv[16];
+    char name[PTOC_SIZE];
+    UT_hash_handle hh;
+};
+
+struct keydic {
+    char name[18];
+    struct titlekeystruct titlekey;
+    UT_hash_handle hh;
 };
 #endif // _STRUCT_H_
