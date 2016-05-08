@@ -4,5 +4,6 @@ program wudecrypt {
         main.c
         functions.c
         aes.c
+        sha1.c
     }
 }

@@ -1,0 +1,8 @@
+Entries are in the order of importance (most important on top):
+
+* Put comments in the code, it's currently hard to understand and a mess for everybody else than me.
+* Optimize the code as much as possible. It's currently very slow.
+
+Possible features that will most probably never be implemented:
+
+* Multi-threading during file decryption (at least more than one partition at once could give a great speedup).

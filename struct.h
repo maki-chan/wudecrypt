@@ -51,6 +51,43 @@ struct titlekey {
 
 static const UT_icd titlekey_icd = { sizeof(struct titlekey), NULL, NULL, NULL };
 
+struct directory {
+    int64_t record_offset;
+    char parent[512];
+
+    UT_array* subdirs;
+    UT_array* files;
+
+    char directory_name[512];
+};
+
+static const UT_icd directory_icd = { sizeof(struct directory), NULL, NULL, NULL };
+
+struct file {
+    char parent[512];
+    char filename[512];
+
+    int64_t volume_base_offset;
+    int64_t data_section_offset;
+    int64_t lba;
+    int64_t size;
+
+    struct partition* parent_partition;
+    uint32_t entry_id;
+};
+
+static const UT_icd file_icd = { sizeof(struct file), NULL, NULL, NULL };
+
+struct volume {
+    struct partition* source;
+
+    char identifier[PTOC_SIZE];
+    int64_t volume_base_offset;
+    int64_t data_offset;
+
+    struct directory* root_directory;
+};
+
 struct block {
     int64_t number;
     int64_t offset;

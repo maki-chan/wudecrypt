@@ -10,7 +10,7 @@
 
 int main(int argc, char* argv[]) {
     int i, j, c;
-    uint32_t partition_count, current_ft_size;
+    uint32_t partition_count, current_ft_size, current_dir_index;
     uint64_t cluster_start, entries_offset, total_entries, name_table_offset, current_entry_offset, current_name_offset;
     char* gameserial;
     char* gameversion;
@@ -18,6 +18,7 @@ int main(int argc, char* argv[]) {
     char* sysversion;
     char partition_hash_name[18];
     char calculated_name[19];
+    char outputdir[1024];
     uint8_t* commonkey;
     uint8_t* disckey;
     uint8_t* partition_toc;
@@ -28,6 +29,7 @@ int main(int argc, char* argv[]) {
     uint8_t raw_entry[16];
     struct partition_entry* entry;
     struct partition* partitions;
+    struct volume* volumes;
     struct titlekey* titlekey;
     struct titlekey* newtitlekey;
     UT_array* titlekeys;
@@ -39,8 +41,8 @@ int main(int argc, char* argv[]) {
     printf("WUDecrypt v%s by makikatze\n", APP_VERSION);
     printf("Licensed under GNU AGPLv3\n\n");
 
-    if (argc != 5) {
-        printf("Usage: %s <disc.wud> <outputdir> <commonkey.bin> <disckey.bin>\n", argv[0]);
+    if (argc < 5 || argc > 6) {
+        printf("Usage: %s <disc.wud> <outputdir> <commonkey.bin> <disckey.bin> [<partition_identifier>]\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
@@ -108,9 +110,10 @@ int main(int argc, char* argv[]) {
     }
 
     partition_count = bytesToUIntBE(partition_toc + 0x1C);
-    printf("Partition count: %d\n\n", partition_count);
+    printf("Partition count: %d\n", partition_count);
 
     partitions = (struct partition*)malloc(partition_count * sizeof(struct partition));
+    volumes = (struct volume*)malloc(partition_count * sizeof(struct volume));
     for (i = 0; i < partition_count; i++) {
         memcpy(partitions[i].identifier, partition_toc + PARTITION_TOC_OFFSET + (i * PARTITION_TOC_ENTRY_SIZE), 0x19);
         memcpy(partitions[i].name, partition_toc + PARTITION_TOC_OFFSET + (i * PARTITION_TOC_ENTRY_SIZE), PARTITION_TOC_ENTRY_SIZE);
@@ -118,7 +121,7 @@ int main(int argc, char* argv[]) {
         partitions[i].offset *= 0x8000;
         partitions[i].offset -= 0x10000;
 
-        printf("Partition %d:\n", i + 1);
+        printf("\nPartition %d:\n", i + 1);
         printf("\tPartition ID:     %.*s\n", 0x19, partitions[i].identifier);
         printf("\tPartition Name:   %s\n", partitions[i].name);
         printf("\tPartition Offset: 0x%llX\n", (unsigned long long int)partitions[i].offset);
@@ -240,6 +243,24 @@ int main(int argc, char* argv[]) {
                     }
                 }
             }
+
+            if ((argc >= 6 && strncmp((char*)partitions[i].name, argv[5], 2) == 0)
+                || argc < 6) {
+                volumes[i].source = &(partitions[i]);
+                volumes[i].volume_base_offset = partitions[i].offset;
+                strncpy(volumes[i].identifier, partitions[i].name, PARTITION_TOC_ENTRY_SIZE);
+                current_dir_index = 0;
+                volumes[i].root_directory = create_directory(volumes[i].source, &current_dir_index, "");
+
+                strncpy(outputdir, argv[2], 1024);
+                if(outputdir[strlen(outputdir) - 1] == '/') {
+                    outputdir[strlen(outputdir) - 1] = '\0';
+                }
+
+                extract_all(wudimage, volumes[i].root_directory, outputdir);
+            }
+        } else {
+            printf("WARNING: Partition %s has no matching key and cannot be decrypted\n\n", partitions[i].name);
         }
     }
 

@@ -2,6 +2,14 @@
 #define _CONFIG_H_
 #include <stdint.h>
 
+#ifndef _WIN32
+#include <sys/stat.h>
+#define makedir(dir) mkdir(dir, 0777)
+#else
+#include <direct.h>
+#define makedir(dir) _mkdir(dir)
+#endif
+
 #define PTOC_SIZE 0x80
 
 static const char* APP_VERSION = "0.1";
