@@ -1,7 +1,6 @@
 #ifndef _STRUCT_H_
 #define _STRUCT_H_
 #include "config.h"
-#include "uthash.h"
 #include "utarray.h"
 
 struct partition_cluster {
@@ -43,19 +42,14 @@ struct partition {
     UT_array* entries;
 };
 
-struct titlekeystruct {
+struct titlekey {
+    char name[18];
     uint8_t encryptedKey[16];
     uint8_t decryptedKey[16];
     uint8_t iv[16];
-    char name[PTOC_SIZE];
-    UT_hash_handle hh;
 };
 
-struct keydic {
-    char name[18];
-    struct titlekeystruct titlekey;
-    UT_hash_handle hh;
-};
+static const UT_icd titlekey_icd = { sizeof(struct titlekey), NULL, NULL, NULL };
 
 struct block {
     int64_t number;

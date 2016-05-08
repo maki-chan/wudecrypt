@@ -31,5 +31,9 @@
 # Debug files
 *.dSYM/
 
-# Custom debug files
+# Custom debug and program output files
+SI*/
+GI*/
+UP*/
+GM*/
 debug/

@@ -1,7 +1,6 @@
 wudecrypt uses the following libraries according to their license:
 
 
-uthash
 utarray
 
 Copyright (c) 2003-2014, Troy D. Hanson    http://troydhanson.github.com/uthash/

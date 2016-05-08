@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "config.h"
-#include "uthash.h"
 #include "utarray.h"
 #include "struct.h"
 #include "functions.h"
@@ -18,16 +17,24 @@ int main(int argc, char* argv[]) {
     char* gameregion;
     char* sysversion;
     char partition_hash_name[18];
+    char calculated_name[19];
     uint8_t* commonkey;
     uint8_t* disckey;
     uint8_t* partition_toc;
     uint8_t* partition_block;
+    uint8_t* decrypted_data;
+    uint8_t* decrypted_data2;
+    uint8_t* titleid;
     uint8_t raw_entry[16];
     struct partition_entry* entry;
     struct partition* partitions;
-    struct titlekeystruct* titlekey;
-    struct keydic* titlekeys = NULL;
+    struct titlekey* titlekey;
+    struct titlekey* newtitlekey;
+    UT_array* titlekeys;
     FILE* wudimage;
+
+    // Initialize array right at the start
+    utarray_new(titlekeys, &titlekey_icd);
 
     printf("WUDecrypt v%s by makikatze\n", APP_VERSION);
     printf("Licensed under GNU AGPLv3\n\n");
@@ -117,7 +124,11 @@ int main(int argc, char* argv[]) {
         printf("\tPartition Offset: 0x%llX\n", (unsigned long long int)partitions[i].offset);
 
         strncpy(partition_hash_name, partitions[i].name, 18);
-        HASH_FIND_STR(titlekeys, partition_hash_name, titlekey);
+        for (titlekey = (struct titlekey*)utarray_front(titlekeys); titlekey != NULL; titlekey = (struct titlekey*)utarray_next(titlekeys, titlekey)) {
+            if (strncmp(titlekey->name, partition_hash_name, 18) == 0) {
+                break;
+            }
+        }
         if (strncmp((char*)partitions[i].name, "SI", 2) == 0
             || strncmp((char*)partitions[i].name, "UP", 2) == 0
             || strncmp((char*)partitions[i].name, "GI", 2) == 0
@@ -131,10 +142,10 @@ int main(int argc, char* argv[]) {
             }
 
             printf("\tPartition Key:    ");
-            for (c = 0; c < 16; c++) {
+            for (c = 0; c < 12; c++) {
                 printf("%02X", partitions[i].key[c]);
             }
-            printf("\n\n");
+            printf("********\n\n");
 
             current_ft_size = 0x8000;
 
@@ -202,9 +213,30 @@ int main(int argc, char* argv[]) {
 
             if (strncmp((char*)partitions[i].name, "SI", 2) == 0
                 || strncmp((char*)partitions[i].name, "GI", 2) == 0) {
-                for(entry = (struct partition_entry*)utarray_front(partitions[i].entries); entry != NULL; entry = (struct partition_entry*)utarray_next(partitions[i].entries, entry)) {
-                    if(entry->is_directory != 1 && strincmp(entry->entry_name, TITLE_TICKET_FILE, strlen(TITLE_TICKET_FILE)) == 0) {
-                        // TODO Add title key decryption here, function to decrypt exists now
+                for (entry = (struct partition_entry*)utarray_front(partitions[i].entries); entry != NULL; entry = (struct partition_entry*)utarray_next(partitions[i].entries, entry)) {
+                    if (entry->is_directory != 1 && strincmp(entry->entry_name, TITLE_TICKET_FILE, strlen(TITLE_TICKET_FILE)) == 0) {
+                        decrypted_data = readVolumeEncryptedOffset(partitions[i].key, partitions[i].offset, partitions[i].clusters[entry->starting_cluster].offset, entry->offset_in_cluster + 0x1BF, 0x10, wudimage);
+                        titleid = readVolumeEncryptedOffset(partitions[i].key, partitions[i].offset, partitions[i].clusters[entry->starting_cluster].offset, entry->offset_in_cluster + 0x1DC, 8, wudimage);
+
+                        // Using raw_entry as iv here because its size is suitable
+                        memset(raw_entry, 0, 16);
+                        memcpy(raw_entry, titleid, 8);
+                        decrypted_data2 = (uint8_t*)malloc(0x10 * sizeof(uint8_t));
+                        AES128_CBC_decrypt_buffer(decrypted_data2, decrypted_data, 0x10, commonkey, raw_entry);
+
+                        sprintf(calculated_name, "GM%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX", titleid[0], titleid[1], titleid[2], titleid[3], titleid[4], titleid[5], titleid[6], titleid[7]);
+                        newtitlekey = (struct titlekey*)malloc(sizeof(struct titlekey));
+                        memcpy(newtitlekey->encryptedKey, decrypted_data, 0x10);
+                        memcpy(newtitlekey->decryptedKey, decrypted_data2, 0x10);
+                        memcpy(newtitlekey->iv, raw_entry, 0x10);
+                        strncpy(newtitlekey->name, calculated_name, 0x12);
+
+                        utarray_sort(titlekeys, titlekeycmp);
+                        if(utarray_find(titlekeys, newtitlekey, titlekeycmp) == NULL) {
+                            utarray_push_back(titlekeys, newtitlekey);
+                        }
+
+                        free(newtitlekey);
                     }
                 }
             }

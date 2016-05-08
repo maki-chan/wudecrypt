@@ -14,7 +14,9 @@ uint8_t* readVolumeEncryptedOffset(uint8_t* key, int64_t volume_offset, int64_t 
 
 struct partition_entry* create_partition_entry(uint8_t* raw_entry);
 
-int strincmp(const char *s1, const char *s2, int n);
+int strincmp(const char* s1, const char* s2, int n);
+
+int titlekeycmp(const void* e1, const void* e2);
 
 uint16_t bytesToUShortBE(uint8_t* bytes);
 uint32_t bytesToUIntBE(uint8_t* bytes);

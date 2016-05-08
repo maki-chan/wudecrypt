@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "config.h"
+#include "struct.h"
 #include "functions.h"
 #include "aes.h"
 
@@ -112,6 +113,17 @@ uint8_t* readVolumeEncryptedOffset(uint8_t* key, int64_t volume_offset, int64_t 
 
         read_offset = WIIU_DECRYPTED_AREA_OFFSET + volume_offset + cluster_offset + (blockstruct.number * 0x8000);
         encrypted_chunk = (uint8_t*)readFileOffset(read_offset, sizeof(uint8_t), 0x8000, file);
+        if (encrypted_chunk == NULL) {
+            fprintf(stderr, "Could not read encrypted chunk from file\n");
+            return NULL;
+        }
+
+        decrypted_chunk = (uint8_t*)malloc(0x8000 * sizeof(uint8_t));
+        if (decrypted_chunk == NULL) {
+            fprintf(stderr, "Could not allocate enough memory to decrypt chunk\n");
+            free(encrypted_chunk);
+            return NULL;
+        }
 
         memset(iv, 0, 16);
         AES128_CBC_decrypt_buffer(decrypted_chunk, encrypted_chunk, 0x8000, key, iv);
@@ -165,6 +177,12 @@ int strincmp(const char *s1, const char *s2, int n)
 	  ++s2;
 	}
 	return 0;
+}
+
+int titlekeycmp(const void* e1, const void* e2) {
+    const struct titlekey* ele1 = (struct titlekey*)e1;
+    const struct titlekey* ele2 = (struct titlekey*)e2;
+    return strncmp(ele1->name, ele2->name, 18);
 }
 
 uint16_t bytesToUShortBE(uint8_t* bytes) {
