@@ -43,7 +43,7 @@ struct partition {
 };
 
 struct titlekey {
-    char name[18];
+    char name[19];
     uint8_t encryptedKey[16];
     uint8_t decryptedKey[16];
     uint8_t iv[16];
