@@ -12,7 +12,7 @@
 
 #define PTOC_SIZE 0x80
 
-static const char* APP_VERSION = "0.1";
+static const char* APP_VERSION = "0.1.1";
 
 static const size_t KEY_LENGTH = 16;
 static const size_t GAME_SERIAL_LENGTH = 10;
