@@ -117,6 +117,7 @@ uint8_t* readVolumeEncryptedOffset(uint8_t* key, int64_t volume_offset, int64_t 
         encrypted_chunk = (uint8_t*)readFileOffset(read_offset, sizeof(uint8_t), 0x8000, file);
         if (encrypted_chunk == NULL) {
             fprintf(stderr, "Could not read encrypted chunk from file\n");
+            free(output);
             return NULL;
         }
 
@@ -124,6 +125,7 @@ uint8_t* readVolumeEncryptedOffset(uint8_t* key, int64_t volume_offset, int64_t 
         if (decrypted_chunk == NULL) {
             fprintf(stderr, "Could not allocate enough memory to decrypt chunk\n");
             free(encrypted_chunk);
+            free(output);
             return NULL;
         }
 
@@ -170,8 +172,10 @@ struct partition_entry* create_partition_entry(uint8_t* raw_entry) {
 struct file* create_file(char* parent, char* filename, int64_t volume_base_offset, int64_t data_section_offset, int64_t lba, int64_t size, struct partition* source_partition, uint32_t entry_id) {
     struct file* file = (struct file*)malloc(sizeof(struct file));
 
-    strncpy(file->parent, parent, 512);
-    strncpy(file->filename, filename, 512);
+    strncpy(file->parent, parent, 511);
+    strncpy(file->filename, filename, 511);
+    file->parent[511] = '\0';
+    file->filename[511] = '\0';
     file->volume_base_offset = volume_base_offset;
     file->data_section_offset = data_section_offset;
     file->lba = lba;
@@ -196,10 +200,12 @@ struct directory* create_directory(struct partition* source_partition, uint32_t*
     if (strlen(parent) == 0) {
         strncpy(dir->parent, source_partition->name, PARTITION_TOC_ENTRY_SIZE);
     } else {
-        strncpy(dir->parent, parent, 512);
+        strncpy(dir->parent, parent, 511);
     }
+    dir->parent[511] = '\0';
 
-    strncpy(dir->directory_name, ((struct partition_entry*)utarray_eltptr(source_partition->entries, *current_index))->entry_name, 512);
+    strncpy(dir->directory_name, ((struct partition_entry*)utarray_eltptr(source_partition->entries, *current_index))->entry_name, 511);
+    dir->directory_name[511] = '\0';
     if (dir->parent[strlen(dir->parent) - 1] != '/') {
         sprintf(next_dir, "%s/%s", dir->parent, dir->directory_name);
     } else {
@@ -211,11 +217,13 @@ struct directory* create_directory(struct partition* source_partition, uint32_t*
         if (((struct partition_entry*)utarray_eltptr(source_partition->entries, *current_index))->is_directory) {
             subdir = create_directory(source_partition, current_index, next_dir);
             utarray_push_back(dir->subdirs, subdir);
+            free(subdir);
             (*current_index)--;
         } else {
             entry = (struct partition_entry*)utarray_eltptr(source_partition->entries, *current_index);
             file = create_file(next_dir, entry->entry_name, source_partition->offset, source_partition->clusters[entry->starting_cluster].offset, entry->offset_in_cluster, entry->size, source_partition, *current_index);
             utarray_push_back(dir->files, file);
+            free(file);
         }
     }
 
@@ -225,7 +233,7 @@ struct directory* create_directory(struct partition* source_partition, uint32_t*
 void extract_all(FILE* infile, struct directory* root_directory, char* outputdir) {
     if (makedir(outputdir) != 0) {
         if (errno != EEXIST) {
-            printf("Error: Output directory does not exist, cannot continue\n");
+            fprintf(stderr, "Error: Output directory does not exist, cannot continue\n");
             return;
         }
     }
@@ -242,8 +250,7 @@ void extract_dir(FILE* infile, struct directory* dir, char* outputdir) {
 
     if (makedir(fullout) != 0) {
         if (errno != EEXIST) {
-            printf("Error: Could not create the following directory, cannot continue\n");
-            printf("%s\n", fullout);
+            fprintf(stderr, "Error: Could not create a directory, cannot continue\n");
             return;
         }
     }
@@ -300,8 +307,8 @@ void extract_file_hashed(FILE* infile, char* outputpath, char* volumename, int64
 
     outfile = fopen(outputpath, "w");
     if (outfile == NULL) {
-        printf("Error: Cannot write output file, wasn't able to open it\n");
-        printf("Error for \"%s\"", outputpath);
+        fprintf(stderr, "Error: Cannot write output file, wasn't able to open it\n");
+        fprintf(stderr, "Error for \"%s\"", outputpath);
         return;
     }
 
@@ -316,7 +323,6 @@ void extract_file_hashed(FILE* infile, char* outputpath, char* volumename, int64
         }
 
         iv_block = blockstruct.number & 0xF;
-        iv_block = iv_block > 0x10 ? 0 : iv_block;
 
         read_offset = WIIU_DECRYPTED_AREA_OFFSET + volume_offset + cluster_offset + (blockstruct.number * 0x10000);
 
@@ -341,13 +347,13 @@ void extract_file_hashed(FILE* infile, char* outputpath, char* volumename, int64
         }
 
         if (memcmp(block_sha1, h0, 0x14) != 0) {
-            printf("Warning: Failed SHA1 checksum verification for %s\n", outputpath);
+            fprintf(stderr, "Warning: Failed SHA1 checksum verification for %s\n", outputpath);
         }
 
         max_copy_size = block_size - blockstruct.offset;
         copy_size = (size > max_copy_size) ? max_copy_size : size;
         if (fwrite(decrypted_cluster + blockstruct.offset, sizeof(uint8_t), copy_size, outfile) != copy_size) {
-            printf("Warning: Couldn't write expected output for %s\n", outputpath);
+            fprintf(stderr, "Warning: Couldn't write expected output for %s\n", outputpath);
         }
 
         size -= copy_size;
@@ -370,8 +376,8 @@ void extract_file_unhashed(FILE* infile, char* outputpath, char* volumename, int
 
     outfile = fopen(outputpath, "w");
     if (outfile == NULL) {
-        printf("Error: Cannot write output file, wasn't able to open it\n");
-        printf("Error for \"%s\"", outputpath);
+        fprintf(stderr, "Error: Cannot write output file, wasn't able to open it\n");
+        fprintf(stderr, "Error for \"%s\"", outputpath);
         return;
     }
 
@@ -389,7 +395,7 @@ void extract_file_unhashed(FILE* infile, char* outputpath, char* volumename, int
         max_copy_size = 0x8000 - blockstruct.offset;
         copy_size = (size > max_copy_size) ? max_copy_size : size;
         if (fwrite(decrypted_cluster + blockstruct.offset, sizeof(uint8_t), copy_size, outfile) != copy_size) {
-            printf("Warning: Couldn't write expected output for\n%s\n", outputpath);
+            fprintf(stderr, "Warning: Couldn't write expected output for\n%s\n", outputpath);
         }
 
 

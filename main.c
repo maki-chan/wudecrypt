@@ -16,7 +16,7 @@ int main(int argc, char* argv[]) {
     char* gameversion;
     char* gameregion;
     char* sysversion;
-    char partition_hash_name[18];
+    char partition_hash_name[19];
     char calculated_name[19];
     char outputdir[1024];
     uint8_t* commonkey;
@@ -74,7 +74,11 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "WARNING: Most probably no valid WUD image\nTrying to continue anyways, although errors are expected!\n\n");
     }
 
-    fseek(wudimage, 1, SEEK_CUR);
+    if (fseek(wudimage, 1, SEEK_CUR) != 0) {
+        fprintf(stderr, "Error: Could not seek in WUD image\n");
+        fclose(wudimage);
+        exit(EXIT_FAILURE);
+    }
     gameversion = (char*)readFile(sizeof(char), GAME_VER_LENGTH, wudimage);
     if (gameversion == NULL) {
         fprintf(stderr, "Couldn't read game version from image\n");
@@ -82,7 +86,11 @@ int main(int argc, char* argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    fseek(wudimage, 1, SEEK_CUR);
+    if (fseek(wudimage, 1, SEEK_CUR) != 0) {
+        fprintf(stderr, "Error: Could not seek in WUD image\n");
+        fclose(wudimage);
+        exit(EXIT_FAILURE);
+    }
     sysversion = (char*)readFile(sizeof(char), SYS_VER_LENGTH, wudimage);
     if (sysversion == NULL) {
         fprintf(stderr, "Couldn't read system version from image\n");
@@ -127,6 +135,7 @@ int main(int argc, char* argv[]) {
         printf("\tPartition Offset: 0x%llX\n", (unsigned long long int)partitions[i].offset);
 
         strncpy(partition_hash_name, partitions[i].name, 18);
+        partition_hash_name[18] = '\0';
         for (titlekey = (struct titlekey*)utarray_front(titlekeys); titlekey != NULL; titlekey = (struct titlekey*)utarray_next(titlekeys, titlekey)) {
             if (strncmp(titlekey->name, partition_hash_name, 18) == 0) {
                 break;
@@ -176,7 +185,7 @@ int main(int argc, char* argv[]) {
                 partitions[i].clusters[c].size = (uint64_t)(bytesToUIntBE(partition_block + 0x20 + (0x20 * c) + 4)) * 0x8000;
             }
 
-            entries_offset = (bytesToUIntBE(partition_block + 4) * bytesToUIntBE(partition_block + 8)) + 0x20;
+            entries_offset = ((uint64_t)bytesToUIntBE(partition_block + 4) * bytesToUIntBE(partition_block + 8)) + 0x20;
 
             memcpy(raw_entry, partition_block + entries_offset, 16);
             entry = create_partition_entry(raw_entry);
@@ -233,6 +242,7 @@ int main(int argc, char* argv[]) {
                         memcpy(newtitlekey->decryptedKey, decrypted_data2, 0x10);
                         memcpy(newtitlekey->iv, raw_entry, 0x10);
                         strncpy(newtitlekey->name, calculated_name, 0x12);
+                        newtitlekey->name[18] = '\0';
 
                         utarray_sort(titlekeys, titlekeycmp);
                         if(utarray_find(titlekeys, newtitlekey, titlekeycmp) == NULL) {
@@ -248,11 +258,13 @@ int main(int argc, char* argv[]) {
                 || argc < 6) {
                 volumes[i].source = &(partitions[i]);
                 volumes[i].volume_base_offset = partitions[i].offset;
-                strncpy(volumes[i].identifier, partitions[i].name, PARTITION_TOC_ENTRY_SIZE);
+                strncpy(volumes[i].identifier, partitions[i].name, PARTITION_TOC_ENTRY_SIZE - 1);
+                volumes[i].identifier[127] = '\0';
                 current_dir_index = 0;
                 volumes[i].root_directory = create_directory(volumes[i].source, &current_dir_index, "");
 
-                strncpy(outputdir, argv[2], 1024);
+                strncpy(outputdir, argv[2], 1023);
+                outputdir[1023] = '\0';
                 if(outputdir[strlen(outputdir) - 1] == '/') {
                     outputdir[strlen(outputdir) - 1] = '\0';
                 }
@@ -260,7 +272,7 @@ int main(int argc, char* argv[]) {
                 extract_all(wudimage, volumes[i].root_directory, outputdir);
             }
         } else {
-            printf("WARNING: Partition %s has no matching key and cannot be decrypted\n\n", partitions[i].name);
+            fprintf(stderr, "WARNING: Partition %s has no matching key and cannot be decrypted\n\n", partitions[i].name);
         }
     }
 

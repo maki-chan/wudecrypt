@@ -1,4 +1,4 @@
-# wudecrypt [![Build Status](https://travis-ci.org/maki-chan/wudecrypt.svg?branch=master)](https://travis-ci.org/maki-chan/wudecrypt)
+# wudecrypt [![Build Status](https://travis-ci.org/maki-chan/wudecrypt.svg?branch=master)](https://travis-ci.org/maki-chan/wudecrypt) [![Coverity Scan Build Status](https://scan.coverity.com/projects/8817/badge.svg)](https://scan.coverity.com/projects/maki-chan-wudecrypt)
 
 ## What is wudecrypt?
 wudecrypt (sometimes also written WUDecrypt) is a tool written in C, fully cross-platform compatible, to decrypt Wii U Disk images (.wud).
